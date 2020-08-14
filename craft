@@ -1,0 +1,45 @@
+#!/bin/sh
+
+VERSION="$(basename $0) ver. 0.1"
+USAGE="Usage: $(basename $0) [ dir [ command ] ]"
+DIR=$(realpath aws-cdk-proxysql)
+ACTION=
+OPTIONS=
+
+if [ $# -eq 0 ]; then
+   echo "${USAGE}" >&2
+   exit 1
+fi
+
+while [ $# -gt 0 ]; do
+  case "${1}" in
+    --help | -h | --h* )
+       echo "${USAGE}" >&2
+       exit 0
+       ;;
+    --version | -V )
+       echo "${VERSION}" >&2
+       exit 0
+       ;;
+    *)
+       if [ -z "${ACTION}" ]; then
+         ACTION="${1}"
+       else
+         OPTIONS="${OPTIONS} ${1}"
+       fi
+       shift
+       ;;
+   esac
+done
+
+if [ "${ACTION}" = "install" ] ; then
+   source ./installer
+   run
+   exit
+elif [ "${ACTION}" = "synth" ] ; then
+   $CDK_RUN bash -c "cdk synth"
+   exit
+else
+   echo $"Please correct command(${ACTION})." >&2
+   exit 2
+fi

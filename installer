@@ -1,0 +1,23 @@
+#!/bin/sh
+
+function run {
+    CDK_IMG_ID=$(docker image ls -q craftdb/forge)
+    if [ -z "$CDK_IMG_ID" ]; then
+        echo "Building IMAGE using Dockerfile from https://github.com/CraftDatabase/craft-forge.git"
+        docker build --no-cache --tag craftdb/forge https://github.com/CraftDatabase/craft-forge.git#master:/
+        CDK_IMG_ID=$(docker image ls -q craftdb/forge)
+    fi
+    CDK_CONTAINER_ID=$(docker ps -aq --filter "name=craft_proxysql" --filter "status=running")
+    if [ -z "$CDK_CONTAINER_ID" ]; then
+        echo "Removing broken container if existed:"
+        docker container rm --force craft_proxysql
+        echo "Running FORGE container to fetch CDK runtime:"
+        docker run --detach --name craft_proxysql \
+          -v $(realpath aws-cdk-proxysql):/opt/workspace \
+          --workdir /opt/workspace \
+          $CDK_IMG_ID /bin/sh -c "while true; do sleep 10; done"
+        CDK_CONTAINER_ID=$(docker ps -aq --filter "name=craft_proxysql")
+    fi
+    echo "Installing dependencies:"
+    docker exec -it $CDK_CONTAINER_ID pip install -r requirements.txt
+}
